@@ -1,0 +1,6 @@
+flask
+sqlalchemy
+flask_sqlalchemy
+flask-migrate
+psycopg2-binary   # for connecting to postgresql
+Flask-Pydantic
