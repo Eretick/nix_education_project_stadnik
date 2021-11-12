@@ -1,6 +1,7 @@
 flask
+psycopg2-binary # for connecting to postgresql
 sqlalchemy
 flask_sqlalchemy
 flask-migrate
-psycopg2-binary   # for connecting to postgresql
+flask-login
 Flask-Pydantic
