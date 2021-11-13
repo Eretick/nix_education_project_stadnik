@@ -143,8 +143,9 @@ def add_film(film_title: str, release_data: datetime, user: int or User,
     else:
         raise TypeError("User id must be an integer, or numeric string or User instance!")
 
+
     film = Films(film_title=film_title, film_description=film_description,
-                 user_id=int(user_id), film_rate=film_rate, release_date=release_data, poster_url=poster_url)
+                 user_id=int(user_id), film_rate=float(film_rate), release_date=release_data, poster_url=poster_url)
 
     if validate_film(film) is not True:
         try:
