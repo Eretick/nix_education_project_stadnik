@@ -26,7 +26,26 @@ def user_by_id(user_id):
 
 
 @films_app.route("/find_film/<template>")
-def find_film(template):
-    """ Project requirement #1. Partial film search """
-    films_data = models.Films.query.filter(models.Films.film_title.ilike("%"+template+"%")).all()
+@films_app.route("/find_film/<string:template>&<int:pagination_size>")
+@films_app.route("/find_film/<string:template>&<int:pagination_size>&<int:page_number>")
+def find_films(template, pagination_size=10, page_number=1):
+    """ Project requirement #1. Partial film search. Project requirement #2. Pagination, 10 by default
+    :param template: string film name partial match
+
+    :param pagination_size: int size of pagination per 1 page
+
+    :param page_number: integer number of search page
+
+    :returns: list of found films json data.
+    """
+    if page_number == 1:
+        page_offset = 0
+    else:
+        page_offset = pagination_size*(page_number-1)
+
+    if template == "*":
+        films_data = models.Films.query.limit(pagination_size).offset(page_offset).all()
+    else:
+        films_data = models.Films.query.filter(
+            models.Films.film_title.ilike("%"+template+"%")).limit(pagination_size).offset(page_offset).all()
     return jsonify([film.to_dict() for film in films_data])

@@ -62,7 +62,7 @@ class Films(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     film_title = db.Column(db.String, nullable=False)
     film_description = db.Column(db.String)
-    film_rate = db.Column(db.Integer, default=0)
+    film_rate = db.Column(db.Float, default=0)
     release_date = db.Column(db.TIMESTAMP)
     poster_url = db.Column(db.String)
     user_id = db.Column(db.Integer)
