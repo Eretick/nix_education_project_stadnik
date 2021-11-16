@@ -17,9 +17,9 @@ def read_csv(file):
 def fill_films_and_directors(films_list: list):
     """ Func to fill db with fake films and directors """
     for row in films_list:
-        add_film(film_title=row[0], release_data=datetime.datetime.strptime(row[4], "%Y.%m.%d"),
-                 user=row[6], director_name=row[2], genres=row[7], film_description=row[1],
-                 film_rate=row[3], poster_url=row[5])
+        add_film(title=row[0], release_date=datetime.datetime.strptime(row[4], "%Y.%m.%d"),
+                 user=row[6], directors=row[2], genres=row[7], description=row[1],
+                 rate=row[3], poster_url=row[5])
 
 
 def fill_users(users_list: list):
