@@ -10,7 +10,6 @@ import flask_app.app
 from flask_app import database
 from flask_app.app import films_api, models
 
-
 # models
 from flask_app.errors import NotAuthenticatedError, UserPermissionError
 
@@ -26,9 +25,11 @@ film_model = films_api.model("Film", {"id": fields.Integer(required=True),
 @films_api.route("/api/films/")
 class FilmsManipulator(Resource):
     """ Resource class for filtering films. """
+
     @films_api.marshal_with(film_model, code=200, envelope="films")
     def get(self):
         """ Partial film search with pagination, 10 items by default.
+
     Parameters:
 
         :param template: string film name partial match
@@ -49,13 +50,13 @@ class FilmsManipulator(Resource):
         pagination_size = 10 if params["pagination_size"] is None else params["pagination_size"]
         page_number = 1 if params["page_number"] is None else int(params["page_number"])
         template = None if params["template"] is None else params["template"]
-        page_offset = 0 if page_number == 1 else pagination_size*(page_number-1)
+        page_offset = 0 if page_number == 1 else pagination_size * (page_number - 1)
         # getting films from database
         if template is None:
             films_data = models.Films.query.limit(pagination_size).offset(page_offset).all()
         else:
             films_data = models.Films.query.filter(
-                models.Films.title.ilike("%"+template+"%")).limit(pagination_size).offset(page_offset).all()
+                models.Films.title.ilike("%" + template + "%")).limit(pagination_size).offset(page_offset).all()
             if films_data is []:
                 return "Films not found", 404
         return films_data, 200
@@ -108,10 +109,13 @@ class FilmsManipulator(Resource):
             # getting all film's passed directors
             directors = [i for i in directors.split(",") if i != ""]
             # TODO: delete choosing first element then  multi-directors support will be added
-            film = database.add_film(title=title, description=description,
-                                     release_date=date,
-                                     user=current_user.id, directors=directors, rate=rate,
-                                     poster_url=logo_url, genres=genres)
+            try:
+                film = database.add_film(title=title, description=description,
+                                         release_date=date, user=current_user.id,
+                                         directors=directors, rate=rate,
+                                         poster_url=logo_url, genres=genres)
+            except ValueError:
+                return "Current film already exists!", 403
             return film.to_dict(), 201
 
     @films_api.marshal_with(film_model, code=200, envelope="films")
@@ -167,5 +171,3 @@ class FilmsManipulator(Resource):
                                      directors=directors, rate=rate, release_data=date,
                                      poster_url=logo_url, genres=genres)
         return edition, 200
-
-

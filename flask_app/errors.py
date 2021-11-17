@@ -33,5 +33,12 @@ class NotFoundError(BadRequestError):
 
 
 class UserPermissionError(BadRequestError):
-    """ Error class for 403 (forbidden) error """
+    """ Error class for 403 (forbidden) error in case of user permission. """
     status_code = 403
+    message = "You don't have rights for this action."
+
+
+class GeneralForbiddenError(BadRequestError):
+    """ Error class for 403 (forbidden) error in general case. """
+    status_code = 403
+    message = "Action denied."
