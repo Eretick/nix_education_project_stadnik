@@ -130,3 +130,6 @@ dmypy.json
 
 .idea/
 environ/
+
+# internal project's stuff
+flask_app/db.db
