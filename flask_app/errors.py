@@ -1,3 +1,4 @@
+""" Custom errors """
 
 
 class BadRequestError(Exception):

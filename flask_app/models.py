@@ -2,13 +2,9 @@
  Notices:
  - no need to make column autoincrement=True if it is 1st integer column with no foreign key.
  """
-import json
 from datetime import datetime
-
 from werkzeug.security import check_password_hash, generate_password_hash
-
 from flask_app.app import db
-from flask import jsonify
 from flask_login import UserMixin
 
 # Many To Many relationship between users and uploaded films
@@ -176,7 +172,6 @@ class Films(db.Model):
 
     def set_release_date(self, release_date: str):
         """ Method for changing film's release_date """
-
         if release_date is not None:
             if release_date != self.release_date:
                 self.release_date = datetime.strptime(release_date, "%Y.%m.%d")
@@ -213,7 +208,7 @@ class Directors(db.Model):
 
     def __repr__(self):
         """ Magic method for useful printing info about instance """
-        return f"Director with id: {self.id}"
+        return self.full_name
 
 
 class Genres(db.Model):
@@ -227,7 +222,7 @@ class Genres(db.Model):
 
     def __repr__(self):
         """ Magic method for useful printing info about instance """
-        return f"Genre {self.name} with id: {self.id}"
+        return self.name
 
 
 db.create_all()
