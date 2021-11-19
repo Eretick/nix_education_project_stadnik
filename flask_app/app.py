@@ -1,6 +1,5 @@
-# is not null in query.filter(User.name.isnot(None))
 import os
-from flask import Flask, request
+from flask import Flask
 from flask_login import LoginManager
 from flask_restx import Api
 from flask_sqlalchemy import SQLAlchemy
@@ -13,7 +12,7 @@ films_app.config.from_mapping(SECRET_KEY=os.environ.get('SECRET_KEY', default='d
                               SQLALCHEMY_TRACK_MODIFICATIONS=False,
                               SQLALCHEMY_DATABASE_URI=os.environ.get('SQLALCHEMY_DATABASE_URI',
                                                                      default='sqlite:///db.db',
-                                                                     #default="postgresql://vladislav:my_password@localhost:5432/postgres",
+                                                                     # default="postgresql://vladislav:my_password@localhost:5432/postgres",
                                                                      ),
                               #DEBUG=True,
                               )
@@ -26,7 +25,3 @@ login_manager.init_app(films_app)
 films_api = Api(films_app, doc="/api/")
 # for db migrations
 migrate = Migrate(films_app, db)
-
-# import from top of module create circular import of films_app instance
-
-from flask_app.routes import *

@@ -1,9 +1,118 @@
 """ Module for interacting with database """
-from flask_login import current_user, login_required
+from operator import or_
 
-from .errors import NotAuthenticatedError
+from flask_login import current_user
+from sqlalchemy import func, and_, desc, asc
+from .errors import NotAuthenticatedError, NotFoundError
 from .models import *
 from datetime import datetime
+
+
+def minimal_films_date(to_string=False, decrease=True):
+    """ Function for getting minimal films date from
+
+    :param bool decrease: optional fix minimal date by 1 year cause of films with given year
+                         not matching in >= expression
+
+    :param bool to_string: optional convert given datetime value to string
+
+    """
+    min_date = db.session.query(func.min(Films.release_date)).first()[0]
+    if min_date is None:
+        raise NotFoundError("Films dates are empty!")
+    if decrease:
+        min_date = min_date.replace(year=min_date.year - 1)
+    if to_string:
+        min_date = datetime.strftime(min_date, "%Y.%m.%d")
+    return min_date
+
+
+def maximum_films_date(to_string=False):
+    """ Function for getting minimal films date from """
+    max_date = db.session.query(func.max(Films.release_date)).first()[0]
+    if max_date is None:
+        raise NotFoundError("Films dates are empty!")
+    if to_string:
+        max_date = datetime.strftime(max_date, "%Y.%m.%d")
+    return max_date
+
+
+def find_films_by_filters(template: str = None, date_from: datetime or str = None, date_to: datetime or str = None,
+                          page_number: int = None, pagination_size: int = None, genres: list = None,
+                          directors: list = None, sort_by: str = None, sort_type: str = None):
+    """ Filtering films by passed parameters.
+
+    :param str template: (optional) film name partial match
+
+    :param int pagination_size: (optional) size of pagination per 1 page
+
+    :param int page_number: (optional) number of search page
+
+    :param str genres: (optional) list of genres for filtering
+
+    :param str directors: (optional) list of directors for filtering
+
+    :param str date_from: (optional) data in "%Y.%m.%d" format. Discarding films before given date's year
+
+    :param str date_to: (optional) data in "%Y.%m.%d" format. Discarding films after given date's year
+
+    :param str sort_by: (optional) sorting mode 'rate', 'date' or None. None is Default
+
+    :param str sort_type: (optional) sorting mode 'asc' (ascending) or 'desc' (descending). None is Default
+
+    :returns: list of found films json data and status 200 if found, else error with status 404
+
+    """
+    # finding min/max dates in out database for searching by all films by default
+    if sort_by not in ["rate", "date", None]:
+        raise ValueError("Argument sort_by can has only 'rate', 'date' or None values! ")
+    if sort_type not in ["asc", "desc", None]:
+        raise ValueError("Argument sort_by can has only 'asc', 'desc' or None values! ")
+    if date_from is None:
+        date_from = minimal_films_date(to_string=True, decrease=True)
+    if date_to is None:
+        date_to = maximum_films_date(to_string=True)
+    if genres is None:
+        genres = [genre.name for genre in Genres.query.all()]
+    elif isinstance(genres, str):
+        genres = genres.split(",")
+    if directors is None:
+        directors = [director.full_name for director in Directors.query.all()]
+    elif isinstance(directors, str):
+        directors = directors.split(",")
+
+    page_offset = 0 if page_number == 1 else pagination_size * (page_number - 1)
+    # making search
+    films_data = db.session.query(Films).filter(Films.title.ilike("%" + template + "%")).filter(
+        and_(Films.release_date >= date_from)).filter(and_(Films.release_date <= date_to)).join(films_directors)\
+        .filter(Films.id == films_directors.c.film_id).join(Directors).filter(Directors.full_name.in_(directors))\
+        .join(films_genres).filter(Films.id == films_genres.c.film_id).join(Genres).filter(Genres.name.in_(genres)) \
+
+    # defining sorting type
+    if sort_type is not None:
+        if sort_type == "asc":
+            sorting = asc
+        elif sort_type == "desc":
+            sorting = desc
+    else:
+        sorting = asc
+
+    if sort_by is not None:
+        if sort_by == "rate":
+            column = Films.rate
+        elif sort_by == "date":
+            column = Films.release_date
+    else:
+        column = Films.id
+
+    films_data = films_data.order_by(sorting(column))
+    # adding limits
+    films_data = films_data.limit(pagination_size).offset(page_offset)
+
+    # if films wasn't found
+    if len(films_data.all()) == 0:
+        raise NotFoundError()
+    return films_data.all()
 
 
 def validate_film(film: Films):
@@ -14,7 +123,6 @@ def validate_film(film: Films):
     :returns True if film with same title, rate,
     """
     new_title = film.title
-    new_user_id = film.user_id
     new_date = film.release_date
     # TODO: add to check directors list also
     search = Films.query.filter_by(title=new_title,
@@ -40,8 +148,6 @@ def add_user(nickname: str, email: str, password: str, country: str = "",
         :param city string authorized user's city, default is None for guests.
 
         :param street string authorized user's street, default is None for guests.
-
-        :param is_registered: bool guest mode, False is the guest, True is authorized. Default is False
 
         :param is_admin bool admin mode for authorized users.
 
@@ -184,7 +290,7 @@ def add_film(title: str, release_date: datetime, user: int or User,
 
     :param poster_url: string of film's url poster
 
-    :param genres: string with ganres names devided by space. Goes to the relation table
+    :param genres: string with genres names decided by space. Goes to the relation table
 
     :returns None
     """
@@ -203,30 +309,24 @@ def add_film(title: str, release_date: datetime, user: int or User,
                  user_id=int(user_id), rate=float(rate), release_date=release_date, poster_url=poster_url)
 
     if validate_film(film) is not True:
-        try:
-            # trying to add new film to db table
-            db.session.add(film)
-        # this is test error handling, will catch different errors during dev process.
-        except Exception as e:
-            print(f"Error adding film {film.title}")
-            db.session.rollback()
-        else:
 
-            db.session.commit()
-            # find added film again from db for getting id
-            film = Films.query.filter_by(title=title, description=description, user_id=int(user_id),
-                                         rate=float(rate), release_date=release_date, poster_url=poster_url).first()
+        # trying to add new film to db table
+        db.session.add(film)
+        db.session.commit()
+        # find added film again from db for getting id
+        film = Films.query.filter_by(title=title, description=description, user_id=int(user_id),
+                                     rate=float(rate), release_date=release_date, poster_url=poster_url).first()
 
-            # if films inserted successfully, inserting everything else
-            # making record to directors table
-            add_films_directors(film, directors)
-            # record to relation users-films table
-            user.films.append(film)
-            # recording to genres relations table
-            add_films_genres(film, genres)
-            db.session.commit()
-            # confirm changes
-            return film
+        # if films inserted successfully, inserting everything else
+        # making record to directors table
+        add_films_directors(film, directors)
+        # record to relation users-films table
+        user.films.append(film)
+        # recording to genres relations table
+        add_films_genres(film, genres)
+        db.session.commit()
+        # confirm changes
+        return film
     else:
         raise ValueError(f"Film {film.title} already added.")
 
@@ -250,7 +350,7 @@ def edit_film(id: int, title: str = None, release_data: datetime = None,
 
     :param poster_url: string of film's url poster
 
-    :param genres: string with genres names devided by space. Goes to the relation table
+    :param genres: string with genres names divided by space. Goes to the relation table
 
     :returns None
     """
@@ -267,6 +367,7 @@ def edit_film(id: int, title: str = None, release_data: datetime = None,
                 film.set_title(title)
                 film.set_description(description)
                 # making record to directors table
+                print(f"adding {directors} to {film.title}")
                 add_films_directors(film, directors)
                 film.set_rate(rate)
                 film.set_release_date(release_data)

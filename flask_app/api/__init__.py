@@ -6,7 +6,3 @@ from flask_app.app import login_manager
 def load_user(id):
     """ For keeping user in session """
     return models.User.query.get(int(id))
-
-
-
-

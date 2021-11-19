@@ -1,3 +1,4 @@
+""" Main entry point. Useful for local launches. """
 from flask_app import app
 from flask_app import models
 from flask_app import database
