@@ -4,6 +4,7 @@
  """
 from datetime import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
+
 from flask_app.app import db
 from flask_login import UserMixin
 
@@ -134,7 +135,7 @@ class Films(db.Model):
     # for adding films by append to instance(user.films.append(film))
     users = db.relationship("User", secondary=users_films, backref=db.backref("films", lazy="dynamic"))
     # Many-to-many relation with table directors
-    directors = db.relationship("Directors", secondary=films_directors, backref=db.backref("films", lazy="dynamic"))
+    _directors = db.relationship("Directors", secondary=films_directors, backref=db.backref("films", lazy="dynamic"))
     genres = db.relationship("Genres", secondary=films_genres, backref=db.backref("films", lazy="dynamic"))
 
     def to_dict(self):
@@ -193,6 +194,13 @@ class Films(db.Model):
         else:
             if user_id is not None:
                 raise TypeError("Wrong user_id type!")
+
+    @property
+    def directors(self):
+        if len(self._directors) != 0:
+            return self._directors
+        else:
+            return "unknown"
 
 
 class Directors(db.Model):
