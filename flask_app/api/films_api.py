@@ -71,7 +71,6 @@ class FilmsManipulator(Resource):
 
         return films_data, 200
 
-    #@films_api.marshal_with(film_model, code=201, envelope="films")
     @films_api.doc(params={"title": "string title of the film",
                            "description": " string film description",
                            "directors": "film director/directors divided by ',' ",
@@ -93,12 +92,10 @@ class FilmsManipulator(Resource):
         parser.add_argument("genres", required=True)
         parser.add_argument("rate", type=int, help="Integer number of film's rate between 1-10.")
         params = parser.parse_args()
-        print(params)
         # fix params if not in GET
         title = params["title"]
         description = params["description"]
         directors = params["directors"]
-        print(directors)
         # incoming date must be in string type like 2010.10.10 format
         date = datetime.strptime(params["date"], "%Y.%m.%d") if params["date"] is not None else None
         poster_url = params["poster_url"]
@@ -186,3 +183,23 @@ class FilmsManipulator(Resource):
                                      directors=directors, rate=rate, release_data=date,
                                      poster_url=logo_url, genres=genres)
         return edition, 200
+
+
+@films_api.route("/api/directors")
+class DirectorsManipulator(Resource):
+    @films_api.marshal_with(film_model, code=201, envelope="added_director")
+    @films_api.doc(params={"director_name": "Name of director for inserting"})
+    def post(self):
+        """ Insert director with given name to database. """
+        director = database.add_director("director")
+        return director
+
+    @films_api.doc(params={"director_name": "Name of director for deleting"})
+    def delete(self):
+        """ Delete director with given name from database. """
+        parser = reqparse.RequestParser()
+        parser.add_argument("director_name", required=True)
+        params = parser.parse_args()
+        director = params["director_name"]
+        director = database.delete_director(director)
+        return director

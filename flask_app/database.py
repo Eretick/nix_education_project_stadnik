@@ -1,10 +1,8 @@
 """ Module for interacting with database """
-from operator import or_
-
 from flask_login import current_user
 from sqlalchemy import func, and_, desc, asc
-from .errors import NotAuthenticatedError, NotFoundError
-from .models import *
+from flask_app.errors import NotAuthenticatedError, NotFoundError
+from flask_app.models import Films, User, Directors, Genres, films_directors, films_genres, db
 from datetime import datetime
 
 
@@ -183,6 +181,53 @@ def add_director(full_name: str):
         return director
 
 
+def delete_director(director: str or Directors):
+    """ Function for deleting film's director.
+    Also changes film's deleted director to "unknown" value if given director is only one in film's
+    directors list.
+
+    :param str director: name of director you need to delete.
+                        Also can be Director instance in case of internal using
+    """
+    if isinstance(director, Directors):
+        director_id = director.id
+    elif isinstance(director, str):
+        director_db = Directors.query.filter_by(full_name=director)
+        if director_db:
+            director_id = director_db.first().id
+        else:
+            raise NotFoundError()
+    else:
+        raise TypeError("Argument director must be string name or Director instance!")
+
+    # find all records in films_directors relation table with director we wanna delete
+    # get the list of tuples with 2 elements, 1st is film_id, 2nd is director id
+    all_deleting = db.session.query(films_directors).filter(films_directors.c.director_id == director_id)
+    # if films are linked to current director:
+    deleting_list = all_deleting.all()
+    count_rows = len(deleting_list)
+    if count_rows > 0:
+        # find out if deleting director is the last one
+        films_list = [row[0] for row in all_deleting]
+        for i, film_id in enumerate(films_list):
+            directors = Films.query.filter_by(id=film_id).first().directors
+            # if deleting director is not only one director in film's directors list
+            # simply delete the row from directors relation table
+            if len(directors) > 1:
+                cond1 = (films_directors.c.film_id == deleting_list[i][0])
+                cond2 = (films_directors.c.director_id == deleting_list[i][1])
+                all_deleting.filter(cond1 & cond2).delete()
+            # if it the last one, just change the row director link to id 1 ("unknown")"
+            elif len(directors) == 1:
+                cond1 = (films_directors.c.film_id == deleting_list[i][0])
+                cond2 = (films_directors.c.director_id == deleting_list[i][1])
+                all_deleting.filter(cond1 & cond2).update({"director_id": 1})
+    # finally delete director from directors table
+    Directors.query.filter_by(id=director_id).delete()
+    db.session.commit()
+    return f"Director {director} deleted successfully.", 200
+
+
 def add_genre(genre_name: str):
     """ Add film's genre row in Genres db table
 
@@ -212,14 +257,24 @@ def add_films_directors(film: Films, directors: list or str):
      :returns None
      """
     if isinstance(directors, str):
-        directors = directors.strip().split(",")
+        directors = [i.strip() for i in directors.strip().split(",")]
     elif directors is None:
         return
     else:
         if not isinstance(directors, list):
             raise TypeError("Wrong directors type!")
-    # get list of all directors linked to film before
+
+    # get list of all directors linked to film before (rows film_id, director_id)
     added_directors = db.session.query(films_directors).filter_by(film_id=film.id).all()
+    # get the same list but as Director instances
+    added_directors2 = [i.full_name for i in film.directors]
+    # deleting "unknown" value from relation table for current film
+    if "unknown" in added_directors2:
+        index = added_directors2.index("unknown")
+        cond1 = (films_directors.c.film_id == added_directors[index][0])
+        cond2 = (films_directors.c.director_id == added_directors[index][1])
+        db.session.query(films_directors).filter(cond1 & cond2).delete()
+
     # adding every passed director
     for director_name in directors:
         add_director(full_name=director_name)
@@ -367,7 +422,6 @@ def edit_film(id: int, title: str = None, release_data: datetime = None,
                 film.set_title(title)
                 film.set_description(description)
                 # making record to directors table
-                print(f"adding {directors} to {film.title}")
                 add_films_directors(film, directors)
                 film.set_rate(rate)
                 film.set_release_date(release_data)
@@ -391,3 +445,7 @@ def delete_film(id: int):
         return film, 200
     else:
         raise TypeError("ID must be int!")
+
+
+# adding default Director value for non bound directors
+add_director("unknown")
