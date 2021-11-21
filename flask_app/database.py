@@ -266,14 +266,16 @@ def add_films_directors(film: Films, directors: list or str):
 
     # get list of all directors linked to film before (rows film_id, director_id)
     added_directors = db.session.query(films_directors).filter_by(film_id=film.id).all()
-    # get the same list but as Director instances
-    added_directors2 = [i.full_name for i in film.directors]
-    # deleting "unknown" value from relation table for current film
-    if "unknown" in added_directors2:
-        index = added_directors2.index("unknown")
-        cond1 = (films_directors.c.film_id == added_directors[index][0])
-        cond2 = (films_directors.c.director_id == added_directors[index][1])
-        db.session.query(films_directors).filter(cond1 & cond2).delete()
+    # if Directors table has data
+    if added_directors:
+        # get the same list but as Director instances
+        added_directors2 = [i.full_name for i in film.directors]
+        # deleting "unknown" value from relation table for current film
+        if "unknown" in added_directors2:
+            index = added_directors2.index("unknown")
+            cond1 = (films_directors.c.film_id == added_directors[index][0])
+            cond2 = (films_directors.c.director_id == added_directors[index][1])
+            db.session.query(films_directors).filter(cond1 & cond2).delete()
 
     # adding every passed director
     for director_name in directors:
