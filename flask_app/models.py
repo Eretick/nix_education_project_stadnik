@@ -10,20 +10,20 @@ from flask_login import UserMixin
 
 # Many To Many relationship between users and uploaded films
 users_films = db.Table('usersfilms',
-                       db.Column('film_id', db.ForeignKey('films.id')),
-                       db.Column('user_id', db.ForeignKey('users.id'))
+                       db.Column('film_id', db.ForeignKey('films.id', ondelete="CASCADE")),
+                       db.Column('user_id', db.ForeignKey('users.id', ondelete="CASCADE"))
                        )
 
 # Many To Many relationship between directors and films
 films_directors = db.Table('filmsdirectors',
-                           db.Column('film_id', db.Integer, db.ForeignKey('films.id')),
-                           db.Column('director_id', db.Integer, db.ForeignKey('directors.id')),
+                           db.Column('film_id', db.Integer, db.ForeignKey('films.id', ondelete="CASCADE")),
+                           db.Column('director_id', db.Integer, db.ForeignKey('directors.id', ondelete="CASCADE")),
                            )
 
 # Many To Many relationship between films and genres
 films_genres = db.Table('filmsgenres',
-                        db.Column('film_id', db.ForeignKey('films.id')),
-                        db.Column('genres_id', db.ForeignKey('genres.id'))
+                        db.Column('film_id', db.ForeignKey('films.id', ondelete="CASCADE")),
+                        db.Column('genres_id', db.ForeignKey('genres.id', ondelete="CASCADE"))
                         )
 
 
@@ -136,7 +136,7 @@ class Films(db.Model):
     users = db.relationship("User", secondary=users_films, backref=db.backref("films", lazy="dynamic"))
     # Many-to-many relation with table directors
     _directors = db.relationship("Directors", secondary=films_directors, backref=db.backref("films", lazy="dynamic"))
-    genres = db.relationship("Genres", secondary=films_genres, backref=db.backref("films", lazy="dynamic"))
+    genres = db.relationship("Genres", secondary=films_genres, backref=db.backref("films", lazy="dynamic", cascade="all,delete", passive_deletes=True))
 
     def to_dict(self):
         """ Create dict from attributes to adopt it for json. """

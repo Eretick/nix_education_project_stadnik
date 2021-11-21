@@ -11,10 +11,9 @@ films_app = Flask(__name__)
 films_app.config.from_mapping(SECRET_KEY=os.environ.get('SECRET_KEY', default='dev'),
                               SQLALCHEMY_TRACK_MODIFICATIONS=False,
                               SQLALCHEMY_DATABASE_URI=os.environ.get('SQLALCHEMY_DATABASE_URI',
-                                                                     default='sqlite:///db.db',
-                                                                     # default="postgresql://vladislav:my_password@localhost:5432/postgres",
+                                                                     default="postgresql://vladislav:my_password@localhost:5432/postgres",
                                                                      ),
-                              #DEBUG=True,
+                              # DEBUG=True,
                               )
 # for database
 db = SQLAlchemy(films_app)
