@@ -178,7 +178,8 @@ def add_director(full_name: str):
     if full_name not in all_directors:
         db.session.add(director)
         db.session.commit()
-        return director
+    return director
+
 
 
 def delete_director(director: str or Directors):
@@ -192,9 +193,9 @@ def delete_director(director: str or Directors):
     if isinstance(director, Directors):
         director_id = director.id
     elif isinstance(director, str):
-        director_db = Directors.query.filter_by(full_name=director)
-        if director_db:
-            director_id = director_db.first().id
+        director_db = Directors.query.filter_by(full_name=director).first()
+        if director_db is not None:
+            director_id = director_db.id
         else:
             raise NotFoundError()
     else:

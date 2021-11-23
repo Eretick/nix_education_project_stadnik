@@ -4,17 +4,15 @@ from flask_login import LoginManager
 from flask_restx import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-
-# create and setup films_app
+from flask_app.api import *
 
 films_app = Flask(__name__)
 films_app.config.from_mapping(SECRET_KEY=os.environ.get('SECRET_KEY', default='dev'),
                               SQLALCHEMY_TRACK_MODIFICATIONS=False,
-                              SQLALCHEMY_DATABASE_URI=os.environ.get('SQLALCHEMY_DATABASE_URI',
-                                                                     default="postgresql://vladislav:my_password@localhost:5432/postgres",
-                                                                     ),
-                              # DEBUG=True,
-                              )
+                              SQLALCHEMY_DATABASE_URI=os.environ.get(
+                                  'SQLALCHEMY_DATABASE_URI',
+                                  default="postgresql://vladislav:my_password@localhost:5432/postgres"))
+
 # for database
 db = SQLAlchemy(films_app)
 # for login

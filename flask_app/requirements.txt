@@ -4,4 +4,4 @@ sqlalchemy
 flask_sqlalchemy
 flask-migrate
 flask-login
-Flask-Pydantic
+
