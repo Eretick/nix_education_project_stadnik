@@ -5,8 +5,15 @@
 from datetime import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from flask_app.app import db
+from flask_app.app import db, login_manager
 from flask_login import UserMixin
+
+
+@login_manager.user_loader
+def load_user(id):
+    """ For keeping user in session """
+    return User.query.get(int(id))
+
 
 # Many To Many relationship between users and uploaded films
 users_films = db.Table('usersfilms',

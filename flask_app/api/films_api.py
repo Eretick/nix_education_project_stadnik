@@ -2,13 +2,11 @@
 from datetime import datetime
 from flask_login import login_required, current_user, login_user, logout_user
 from flask_restx import Resource, fields, reqparse
-# from flask_app.app import films_app
 from flask_app import database, models
 from flask_app.models import User
-#from flask_app.app import films_api
 # models
 from flask_app.errors import NotAuthenticatedError, UserPermissionError, NotFoundError, BadRequestError
-from flask_app.app import films_api, login_manager
+from flask_app.app import films_api
 
 # json models
 film_model = films_api.model("Film", {"id": fields.Integer(required=True),
@@ -26,10 +24,7 @@ user_model = films_api.model("User", {"id": fields.Integer(), "nickname": fields
                                       "is_admin": fields.Boolean()})
 director_model = films_api.model("Director", {"id": fields.Integer(), "full_name": fields.String()})
 
-@login_manager.user_loader
-def load_user(id):
-    """ For keeping user in session """
-    return models.User.query.get(int(id))
+
 
 
 @films_api.route("/api/films/")
