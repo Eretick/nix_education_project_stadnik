@@ -1,8 +1,7 @@
 import pytest
-# importing modules completely for making app see his api routes
-from flask_app.app import films_app
+# importing modules completely for making films_library see his api routes
+from flask_app.library_app import films_app
 from flask_app.models import User, Films, Directors
-from flask_app.api.films_api import load_user  # flask need it
 
 # Urls
 BASE_URL = "/api/"
@@ -34,7 +33,7 @@ def login_user(client):
 
 
 def test_index(client):
-    """ Test if app can get main page """
+    """ Test if films_library can get main page """
     response = client.get(BASE_URL)
     assert response.status_code == 200
 
@@ -130,4 +129,4 @@ def test_delete_director(client, login_user):
     # check database doesn't have this director
     assert Directors.query.filter_by(full_name=DIRECTOR_NAME).first() is not None, "You must specify existed director's name!"
     new = client.delete(DIRECTORS_URL, data={"director_name": DIRECTOR_NAME})
-    assert new.status_code == 200
+    assert new.status_code

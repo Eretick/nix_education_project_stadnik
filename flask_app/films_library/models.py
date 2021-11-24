@@ -2,11 +2,10 @@
  Notices:
  - no need to make column autoincrement=True if it is 1st integer column with no foreign key.
  """
+from flask_login import UserMixin
 from datetime import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
-
-from flask_app.app import db, login_manager
-from flask_login import UserMixin
+from films_library import db, login_manager
 
 
 @login_manager.user_loader
@@ -238,6 +237,3 @@ class Genres(db.Model):
     def __repr__(self):
         """ Magic method for useful printing info about instance """
         return self.name
-
-
-db.create_all()

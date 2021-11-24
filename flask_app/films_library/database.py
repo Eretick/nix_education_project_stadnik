@@ -1,8 +1,8 @@
 """ Module for interacting with database """
 from flask_login import current_user
 from sqlalchemy import func, and_, desc, asc
-from flask_app.errors import NotAuthenticatedError, NotFoundError
-from flask_app.models import Films, User, Directors, Genres, films_directors, films_genres, db
+from .errors import NotAuthenticatedError, NotFoundError
+from .models import Films, User, Directors, Genres, films_directors, films_genres, db
 from datetime import datetime
 
 
@@ -450,5 +450,7 @@ def delete_film(id: int):
         raise TypeError("ID must be int!")
 
 
+
 # adding default Director value for non bound directors
+#from .database import add_director
 add_director("unknown")

@@ -1,24 +1,10 @@
-import os
-from flask import Flask
-from flask_login import LoginManager
-from flask_restx import Api
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_app.api import *
+""" Main entry point. Useful for local launches. """
+from films_library import films_app
+# need import resourced api version instead of empty in films_library/__init__.py
+from films_library.api import films_api
 
-films_app = Flask(__name__)
-films_app.config.from_mapping(SECRET_KEY=os.environ.get('SECRET_KEY', default='dev'),
-                              SQLALCHEMY_TRACK_MODIFICATIONS=False,
-                              SQLALCHEMY_DATABASE_URI=os.environ.get(
-                                  'SQLALCHEMY_DATABASE_URI',
-                                  default="postgresql://vladislav:my_password@localhost:5432/postgres"))
+# check if all routes added
+#print(films_app.url_map)
 
-# for database
-db = SQLAlchemy(films_app)
-# for login
-login_manager = LoginManager(films_app)
-login_manager.init_app(films_app)
-# for api
-films_api = Api(films_app, doc="/api/")
-# for db migrations
-migrate = Migrate(films_app, db)
+if __name__ == "__main__":
+    films_app.run()
