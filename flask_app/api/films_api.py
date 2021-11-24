@@ -1,12 +1,16 @@
 """ Api for general things """
 from datetime import datetime
-from flask_login import login_required, current_user
+from flask_login import login_required, current_user, login_user, logout_user
 from flask_restx import Resource, fields, reqparse
+# from flask_app.app import films_app
 from flask_app import database, models
-from flask_app.app import films_api
+from flask_app.models import User
+#from flask_app.app import films_api
 # models
-from flask_app.errors import NotAuthenticatedError, UserPermissionError
+from flask_app.errors import NotAuthenticatedError, UserPermissionError, NotFoundError, BadRequestError
+from flask_app.app import films_api, login_manager
 
+# json models
 film_model = films_api.model("Film", {"id": fields.Integer(required=True),
                                       "title": fields.String(required=True),
                                       "description": fields.String(required=True),
@@ -16,6 +20,16 @@ film_model = films_api.model("Film", {"id": fields.Integer(required=True),
                                       "release_date": fields.String(required=True),
                                       "poster_url": fields.String(required=True),
                                       "user_id": fields.Integer(required=True)})
+user_model = films_api.model("User", {"id": fields.Integer(), "nickname": fields.String(),
+                                      "email": fields.String(), "country": fields.String(),
+                                      "city": fields.String(), "street": fields.String(),
+                                      "is_admin": fields.Boolean()})
+director_model = films_api.model("Director", {"id": fields.Integer(), "full_name": fields.String()})
+
+@login_manager.user_loader
+def load_user(id):
+    """ For keeping user in session """
+    return models.User.query.get(int(id))
 
 
 @films_api.route("/api/films/")
@@ -64,8 +78,9 @@ class FilmsManipulator(Resource):
         # partial range (only from/only to some date) also supported
         try:
             films_data = database.find_films_by_filters(template=template, date_from=date_from, date_to=date_to,
-                                                    page_number=page_number, pagination_size=pagination_size,
-                                                    genres=genres, directors=directors, sort_by=sort_by, sort_type=sort_type)
+                                                        page_number=page_number, pagination_size=pagination_size,
+                                                        genres=genres, directors=directors, sort_by=sort_by,
+                                                        sort_type=sort_type)
         except ValueError as e:
             return str(e), 403
 
@@ -108,7 +123,6 @@ class FilmsManipulator(Resource):
         if current_user.is_authenticated:
             # getting all film's passed directors
             directors = [i for i in directors.split(",") if i != ""]
-            # TODO: delete choosing first element then  multi-directors support will be added
             try:
                 film = database.add_film(title=title, description=description,
                                          release_date=date, user=current_user.id,
@@ -185,21 +199,89 @@ class FilmsManipulator(Resource):
         return edition, 200
 
 
-@films_api.route("/api/directors")
+@films_api.route("/api/directors/")
 class DirectorsManipulator(Resource):
-    @films_api.marshal_with(film_model, code=201, envelope="added_director")
+    @films_api.marshal_with(director_model, code=201, envelope="added_director")
     @films_api.doc(params={"director_name": "Name of director for inserting"})
+    @login_required
     def post(self):
         """ Insert director with given name to database. """
-        director = database.add_director("director")
-        return director
+        parser = reqparse.RequestParser()
+        parser.add_argument("director_name")
+        params = parser.parse_args()
+        name = params["director_name"]
+        if name is not None:
+            director = database.add_director(name)
+            return director, 201
+        else:
+            return BadRequestError
 
     @films_api.doc(params={"director_name": "Name of director for deleting"})
+    @login_required
     def delete(self):
         """ Delete director with given name from database. """
         parser = reqparse.RequestParser()
         parser.add_argument("director_name", required=True)
         params = parser.parse_args()
         director = params["director_name"]
-        director = database.delete_director(director)
-        return director
+        try:
+            director = database.delete_director(director)
+            return director, 200
+        except NotFoundError:
+            return "Director with given name wasn't found!", 403
+
+
+# users api
+@films_api.route("/api/users/profile/")
+class UserProfile(Resource):
+    @films_api.marshal_with(user_model, code=200, envelope="users")
+    @login_required
+    def get(self):
+        """
+        Registered current user profile
+        """
+        if current_user is not None:
+            if current_user.is_authenticated:
+                user = current_user.to_dict()
+                return user, 200
+            else:
+                return "You must login for view profile", 401
+
+
+@films_api.route("/api/users/login/")
+class UserLogin(Resource):
+    @films_api.marshal_with(user_model, code=200, envelope="users")
+    @films_api.doc(params={"email": "string user's email",
+                           "password": "string user's password"
+                           })
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument("email", required=True)
+        parser.add_argument("password", required=True)
+        params = parser.parse_args()
+
+        email = params["email"]
+        password = params["password"]
+        if email is None or password is None:
+            return "No data passed", 403
+
+        if current_user.is_authenticated:
+            return f"{current_user.nickname} already logged in!", 303
+
+        user = User.query.filter_by(email=email).first()
+        if user is not None and user.check_password(password):
+            login_user(user, remember=True)
+            return user.to_dict(), 200
+        return "Wrong email/password pair", 204
+
+
+@films_api.route("/api/users/logout/")
+class UserLogout(Resource):
+    @login_required
+    def get(self):
+        if current_user.is_authenticated:
+            name = current_user.nickname
+            logout_user()
+            return name, 200
+        else:
+            raise NotAuthenticatedError("Only logged in users can logout!")

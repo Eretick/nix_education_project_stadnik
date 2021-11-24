@@ -35,13 +35,18 @@ def fill_genres(genres_list: list):
         add_genre(genre_name=row[0])
 
 
-print("Generating fake data...")
-users = read_csv("users.csv")
-films = read_csv("films.csv")
-genres = read_csv("genres.csv")
-# users first
-fill_users(users)
-# then genres (doesn't matter)
-fill_genres(genres)
-# then (the last one!) films
-fill_films_and_directors(films)
+def fill_db():
+    print("Generating fake data...")
+    users = read_csv("users.csv")
+    films = read_csv("films.csv")
+    genres = read_csv("genres.csv")
+    # users first
+    fill_users(users)
+    # then genres (doesn't matter)
+    fill_genres(genres)
+    # then (the last one!) films
+    fill_films_and_directors(films)
+
+
+if __name__ == "__main__":
+    fill_db()
