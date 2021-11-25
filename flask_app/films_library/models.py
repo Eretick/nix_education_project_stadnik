@@ -237,3 +237,6 @@ class Genres(db.Model):
     def __repr__(self):
         """ Magic method for useful printing info about instance """
         return self.name
+
+
+db.create_all()

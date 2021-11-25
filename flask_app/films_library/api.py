@@ -1,10 +1,7 @@
 """ Api for general things """
 from datetime import datetime
-
 from flask_login import login_required, current_user, login_user, logout_user
 from flask_restx import Resource, fields, reqparse
-
-
 from . import films_api
 from . import database
 from . import models
@@ -20,10 +17,12 @@ film_model = films_api.model("Film", {"id": fields.Integer(required=True),
                                       "release_date": fields.String(required=True),
                                       "poster_url": fields.String(required=True),
                                       "user_id": fields.Integer(required=True)})
+
 user_model = films_api.model("User", {"id": fields.Integer(), "nickname": fields.String(),
                                       "email": fields.String(), "country": fields.String(),
                                       "city": fields.String(), "street": fields.String(),
                                       "is_admin": fields.Boolean()})
+
 director_model = films_api.model("Director", {"id": fields.Integer(), "full_name": fields.String()})
 
 
