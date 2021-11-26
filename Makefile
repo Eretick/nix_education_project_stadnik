@@ -13,10 +13,10 @@ db_downgrade:
     flask db downgrade
 
 app_build:
-    sudo docker-compose --env-file .env up -d --build
+    sudo docker-compose --env-file .env.list up -d --build
 
 app_up:
-    sudo docker-compose --env-file .env up -d
+    sudo docker-compose --env-file .env.list up -d
 
 app_down:
     sudo docker-compose down

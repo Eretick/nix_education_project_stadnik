@@ -30,7 +30,7 @@ director_model = films_api.model("Director", {"id": fields.Integer(), "full_name
 class FilmsManipulator(Resource):
     """ Resource class for filtering films. """
 
-    @films_api.marshal_with(film_model, code=200, envelope="films")
+    @films_api.marshal_with(film_model)
     @films_api.doc(params={"template": "film name partial match",
                            "pagination_size": "size of pagination per 1 page",
                            "page_number": "number of search page",
@@ -77,16 +77,18 @@ class FilmsManipulator(Resource):
                                                         sort_type=sort_type)
         except ValueError as e:
             return str(e), 403
-
-        return films_data, 200
+        except NotFoundError as e:
+            return e.message, e.status_code
+        else: 
+            return films_data, 200
 
     @films_api.doc(params={"title": "string title of the film",
                            "description": " string film description",
                            "directors": "film director/directors divided by ',' ",
                            "rate": "integer from 0 to 10 including, default is 10.",
-                           "date": "datetime type release time. As example, datetime.datetime(1996, 1, 19)",
+                           "date": "datetime type release time. As example, 1996.01.19)",
                            "poster_url": "string of film's url poster",
-                           "genres": "datetime type release time. As example, datetime.datetime(1996, 1, 19)",
+                           "genres": "datetime type release time. As example, 2006.01.19)",
                            })
     @login_required
     def post(self):
@@ -126,7 +128,7 @@ class FilmsManipulator(Resource):
                 return "Current film already exists!", 403
             return film.to_dict(), 201
 
-    @films_api.marshal_with(film_model, code=200, envelope="films")
+    #@films_api.marshal_with(film_model, code=200, envelope="films")
     @films_api.doc(params={"id": "id of film you want to delete."})
     @login_required
     def delete(self):
@@ -138,20 +140,21 @@ class FilmsManipulator(Resource):
         params = parser.parse_args()
         film_id = params.get("id")
         if current_user.is_authenticated:
-            if current_user.is_admin or current_user.id == film_id:
-                if film_id is not None:
-                    film = models.Films.query.filter_by(id=film_id).first()
-                    if film is not None:
-                        deleted_film = database.delete_film(film_id)
-                        return deleted_film, 200
-                    else:
-                        return "Film with given id doesn't exist in films database", 404
+            if current_user.is_admin or current_user.id == id:
+                try:
+                    film = database.delete_film(film_id)
+                except TypeError as e:
+                    return str(e), 404
+                except NotFoundError as n:
+                    return n.message, n.status_code
+                except ValueError as v:
+                    return str(v), 404
+                except UserPermissionError as u:
+                    return u.message, u.status_code
                 else:
-                    return "Wrong deletion film id!", 404
+                    return film.to_dict(), 200
             else:
-                raise UserPermissionError("You must be login for deleting film!")
-        else:
-            raise NotAuthenticatedError("You must be login for deleting film!")
+                return UserPermissionError.message, UserPermissionError.status_code
 
     @films_api.marshal_with(film_model, code=201, envelope="edited_film")
     @films_api.doc(params={"id": "film's id from database you want to edit",
@@ -241,10 +244,25 @@ class UserProfile(Resource):
             else:
                 return "You must login for view profile", 401
 
+    @films_api.doc(params={"user_id": "User id",
+                           "is_admin": "bool admin mode"
+                           })
+    @login_required
+    def put(self):
+        """ Chenging user admin mode """
+        parser = reqparse.RequestParser()
+        parser.add_argument("user_id", type=int, required=True)
+        parser.add_argument("is_admin", type=bool, required=True)
+        params = parser.parse_args()
+        user_id = params["user_id"]
+        is_admin = params["is_admin"]
+        database.set_admin(user_id, is_admin)
+        return "Success!"
+
 
 @films_api.route("/api/users/login/")
 class UserLogin(Resource):
-    @films_api.marshal_with(user_model, code=200, envelope="users")
+    #@films_api.marshal_with(user_model, code=200, envelope="users")
     @films_api.doc(params={"email": "string user's email",
                            "password": "string user's password"
                            })
@@ -282,7 +300,7 @@ class UserLogout(Resource):
 
 
 @films_api.route("/api/users/register/")
-class UserLogin(Resource):
+class UserRegister(Resource):
     @films_api.marshal_with(user_model, code=200, envelope="users")
     @films_api.doc(params={"email": "string user's email",
                            "password": "string user's password",
