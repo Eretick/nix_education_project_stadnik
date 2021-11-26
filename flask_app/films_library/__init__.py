@@ -16,9 +16,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_mapping(SECRET_KEY=os.environ.get('SECRET_KEY', default='dev'),
                                   SQLALCHEMY_TRACK_MODIFICATIONS=False,
-                                  SQLALCHEMY_DATABASE_URI=os.environ.get(
-                                      'SQLALCHEMY_DATABASE_URI',
-                                      default="postgresql://vladislav:my_password@localhost:5432/postgres"))
+                                  SQLALCHEMY_DATABASE_URI=os.environ.get('SQLALCHEMY_DATABASE_URI'))
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
