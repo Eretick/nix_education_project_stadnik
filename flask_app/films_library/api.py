@@ -262,7 +262,7 @@ class UserLogin(Resource):
         if current_user.is_authenticated:
             return f"{current_user.nickname} already logged in!", 303
 
-        user = User.query.filter_by(email=email).first()
+        user = models.User.query.filter_by(email=email).first()
         if user is not None and user.check_password(password):
             login_user(user, remember=True)
             return user.to_dict(), 200
@@ -279,3 +279,46 @@ class UserLogout(Resource):
             return name, 200
         else:
             raise NotAuthenticatedError("Only logged in users can logout!")
+
+
+@films_api.route("/api/users/register/")
+class UserLogin(Resource):
+    @films_api.marshal_with(user_model, code=200, envelope="users")
+    @films_api.doc(params={"email": "string user's email",
+                           "password": "string user's password",
+                            "nickname": "string user's nickname",
+                            "country": "string user's country",
+                            "city": "string user's city",
+                            "street": "string user's street"
+                           })
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument("email", required=True)
+        parser.add_argument("password", required=True)
+        parser.add_argument("nickname", required=True)
+        parser.add_argument("country", required=True)
+        parser.add_argument("city")
+        parser.add_argument("street")
+        params = parser.parse_args()
+
+        email = params["email"]
+        password = params["password"]
+        nickname = params["nickname"]
+        country = params["country"]
+        city = params["city"]
+        street = params["street"]
+
+        if email is None or password is None:
+            return "Needs email and password both for register", 403
+
+        if current_user.is_authenticated:
+            return f"{current_user.nickname} already registered in!", 303
+
+        user = models.User.query.filter_by(email=email).first()
+        if user is None:
+            user = database.add_user(email=email, password=password, nickname=nickname, 
+                                country=country, city=city, street=street)
+            return user.to_dict(), 200
+        else:
+            return f"User already registered!", 403
+        return "Wrong email/password pair", 204
