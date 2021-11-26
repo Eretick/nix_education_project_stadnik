@@ -160,7 +160,7 @@ def add_user(nickname: str, email: str, password: str, country: str = "",
     if email not in all_emails:
         db.session.add(user)
         db.session.commit()
-
+        return user
     else:
         raise ValueError("User with same email already registered")
 
