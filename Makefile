@@ -1,5 +1,5 @@
 set_flask_app:
-    export FLASK_APP=flask_app/app.py;
+    export FLASK_APP=flask_app/app.py
 
 db_init:
     flask db init
@@ -22,4 +22,10 @@ app_down:
     sudo docker-compose down
 
 volumes_remove:
-	sudo docker rm -vf $(sudo docker ps -aq)
+	sudo docker rm -f $(sudo docker ps -aq)
+
+stop_nginx:
+    sudo nginx -s stop
+
+look_80:
+    sudo lsof -i -P -n | grep 80

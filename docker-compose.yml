@@ -14,32 +14,44 @@ services:
     ports:
       - "5432:5432"
 
-  pgadmin:
-    image: dpage/pgadmin4:4.30
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-      PGADMIN_LISTEN_PORT: 80
-    ports:
-      - "8080:80"
-    volumes:
-      - pgadmin-data:/var/lib/pgadmin
+  # pgadmin:
+  #   image: dpage/pgadmin4:4.30
+  #   restart: always
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+  #     PGADMIN_LISTEN_PORT: 800
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - pgadmin-data:/var/lib/pgadmin
 
   films_app:
-    build: flask_app/
+    build: .
     restart: on-failure
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      SQLALCHEMY_DATABASE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/postgres
+      SQLALCHEMY_DATABASE_URI: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/postgres
     volumes:
       - ./flask_app/:/app
-    ports:
-      - "5000:5000"
+    expose:
+      - 5000
     depends_on:
       - db
-
+  
+  nginx:
+    build: nginx
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./cert:/cert
+      - ./nginx:/etc/nginx/conf.d
+        - ./flask_app/
+      
+    depends_on:
+      - films_app
 
 volumes:
   db-data:
