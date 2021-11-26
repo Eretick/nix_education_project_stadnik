@@ -49,7 +49,6 @@ services:
       - ./cert:/cert
       - ./nginx:/etc/nginx/conf.d
         - ./flask_app/
-      
     depends_on:
       - films_app
 

@@ -1,7 +1,7 @@
 """ Module for interacting with database """
 from flask_login import current_user
 from sqlalchemy import func, and_, desc, asc
-from .errors import NotAuthenticatedError, NotFoundError
+from .errors import NotAuthenticatedError, NotFoundError, UserPermissionError
 from .models import *
 from datetime import datetime
 
@@ -435,18 +435,43 @@ def edit_film(id: int, title: str = None, release_data: datetime = None,
             else:
                 raise ValueError("Only admins and owners can edit film!")
         else:
-            return "Film not found", 200
+            raise FileNotFoundError("Film not found!")
     else:
         return NotAuthenticatedError()
 
 
 def delete_film(id: int):
     """ Function for deleting the film from all films table """
-    if isinstance(id, int):
-        film = Films.query.filter_by(id=id).delete()
-        db.session.commit()
-        return film, 200
+    if id is not None:
+        film = Films.query.filter_by(id=id).first()
+        if film is not None:
+            if isinstance(id, int):
+                Films.query.filter_by(id=id).delete()
+                db.session.commit()
+                return film
+            else:
+                raise TypeError("ID must be int!")
+        else:
+            raise NotFoundError("Film with given id doesn't exist in films database")
     else:
-        raise TypeError("ID must be int!")
+        raise ValueError("Wrong deletion film id!")
+
+
+def set_admin(user_id:int, admin_mode:bool):
+    """ Function for changin admin bode for user with given ID.
+    Chamhing is_admin value in database for given user
+    """
+    if not isinstance(user_id, int):
+        raise TypeError("User id must be integer!")
+    if not isinstance(admin_mode, bool):
+        raise TypeError("Admin mode must be True or False!")
+
+    user = User.query.filter_by(id=user_id).first()
+
+    if user is None:
+        raise NotFoundError(f"User with id={user_id} not found!")
+    user.set_admin(admin_mode)
+
+    db.session.commit()
 
 

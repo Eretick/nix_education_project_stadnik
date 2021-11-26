@@ -239,4 +239,4 @@ class Genres(db.Model):
         return self.name
 
 
-#db.create_all()
+db.create_all()
