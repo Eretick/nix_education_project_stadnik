@@ -28,7 +28,9 @@ director_model = films_api.model("Director", {"id": fields.Integer(), "full_name
 
 @films_api.route("/api/films/")
 class FilmsManipulator(Resource):
-    """ Resource class for filtering films. """
+    """ Resource class for filtering films.
+    :methods: GET, POST, DELETE, PUT
+    """
 
     @films_api.marshal_with(film_model)
     @films_api.doc(params={"template": "film name partial match",
@@ -55,7 +57,7 @@ class FilmsManipulator(Resource):
         parser.add_argument("genres", help="List of genres for filter. ")
         parser.add_argument("directors", help="List of genres for filter. ")
         parser.add_argument("sort_by", help="sorting mode 'rate', 'date' or None. None is Default.")
-        parser.add_argument("sort_type", help="sorting mode 'asc' (ascending) or 'desc' (descending). 'asc' is Default")
+        parser.add_argument("sort_type", help="sorting mode 'asc' (ascending) or 'desc' (descending).'asc' is Default")
         params = parser.parse_args()
         # fix params if not in GET
         pagination_size = 10 if params["pagination_size"] is None else params["pagination_size"]
@@ -79,7 +81,7 @@ class FilmsManipulator(Resource):
             return str(e), 403
         except NotFoundError as e:
             return e.message, e.status_code
-        else: 
+        else:
             return films_data, 200
 
     @films_api.doc(params={"title": "string title of the film",
@@ -98,7 +100,8 @@ class FilmsManipulator(Resource):
         parser.add_argument("title", required=True)
         parser.add_argument("description")
         parser.add_argument("directors", required=True)
-        parser.add_argument("date", type=str, help="Date must be passed as string like 2010.10.10", required=True)
+        parser.add_argument("date", type=str, help="Date must be passed as string like 2010.10.10",
+                            required=True)
         parser.add_argument("poster_url", type=str)
         parser.add_argument("genres", required=True)
         parser.add_argument("rate", type=int, help="Integer number of film's rate between 1-10.")
@@ -128,7 +131,7 @@ class FilmsManipulator(Resource):
                 return "Current film already exists!", 403
             return film.to_dict(), 201
 
-    #@films_api.marshal_with(film_model, code=200, envelope="films")
+    # @films_api.marshal_with(film_model, code=200, envelope="films")
     @films_api.doc(params={"id": "id of film you want to delete."})
     @login_required
     def delete(self):
@@ -162,8 +165,7 @@ class FilmsManipulator(Resource):
                            "description": "(optional) string film description",
                            "directors": "(optional) film director/directors decided by ',' ",
                            "rate": "(optional) integer from 0 to 10 including, default is 10.",
-                           "date": "(optional) datetime type release time. "
-                                   "As example, datetime.datetime(1996, 1, 19)",
+                           "date": "(optional) datetime type release time. As example, '2010.01.01'",
                            "poster_url": "(optional) string of film's url poster",
                            "genres": "string with genres names decided by ',' "
                            })
@@ -190,7 +192,7 @@ class FilmsManipulator(Resource):
         genres = params["genres"]
         rate = params["rate"]
 
-        edition = database.edit_film(id=id, title=title, description=description,
+        edition = database.edit_film(film_id=id, title=title, description=description,
                                      directors=directors, rate=rate, release_data=date,
                                      poster_url=logo_url, genres=genres)
         return edition, 200
@@ -198,6 +200,9 @@ class FilmsManipulator(Resource):
 
 @films_api.route("/api/directors/")
 class DirectorsManipulator(Resource):
+    """ Directors flask resource.
+     :methods: POST, DELETE
+     """
     @films_api.marshal_with(director_model, code=201, envelope="added_director")
     @films_api.doc(params={"director_name": "Name of director for inserting"})
     @login_required
@@ -210,8 +215,7 @@ class DirectorsManipulator(Resource):
         if name is not None:
             director = database.add_director(name)
             return director, 201
-        else:
-            return BadRequestError
+        return BadRequestError.message, BadRequestError.status_code
 
     @films_api.doc(params={"director_name": "Name of director for deleting"})
     @login_required
@@ -231,25 +235,28 @@ class DirectorsManipulator(Resource):
 # users api
 @films_api.route("/api/users/profile/")
 class UserProfile(Resource):
+    """ Profile flask resource.
+
+     :methods: GET, PUT
+     """
     @films_api.marshal_with(user_model, code=200, envelope="users")
     @login_required
     def get(self):
         """
-        Registered current user profile
+        Get registered current user profile with GET method.
         """
         if current_user is not None:
             if current_user.is_authenticated:
                 user = current_user.to_dict()
                 return user, 200
-            else:
-                return "You must login for view profile", 401
+            return "You must login for view profile", 401
 
     @films_api.doc(params={"user_id": "User id",
                            "is_admin": "bool admin mode"
                            })
     @login_required
     def put(self):
-        """ Chenging user admin mode """
+        """ Changing user admin mode with PUT method """
         parser = reqparse.RequestParser()
         parser.add_argument("user_id", type=int, required=True)
         parser.add_argument("is_admin", type=bool, required=True)
@@ -262,11 +269,15 @@ class UserProfile(Resource):
 
 @films_api.route("/api/users/login/")
 class UserLogin(Resource):
-    #@films_api.marshal_with(user_model, code=200, envelope="users")
+    """ Login flask resource.
+
+    :methods: POST"""
+    # @films_api.marshal_with(user_model, code=200, envelope="users")
     @films_api.doc(params={"email": "string user's email",
                            "password": "string user's password"
                            })
     def post(self):
+        """ Login user with POST request """
         parser = reqparse.RequestParser()
         parser.add_argument("email", required=True)
         parser.add_argument("password", required=True)
@@ -289,27 +300,36 @@ class UserLogin(Resource):
 
 @films_api.route("/api/users/logout/")
 class UserLogout(Resource):
+    """ Logout flask resource.
+
+    :methods: GET
+    """
     @login_required
     def get(self):
+        """ Logout with GET request """
         if current_user.is_authenticated:
             name = current_user.nickname
             logout_user()
             return name, 200
-        else:
-            raise NotAuthenticatedError("Only logged in users can logout!")
+        raise NotAuthenticatedError("Only logged in users can logout!")
 
 
 @films_api.route("/api/users/register/")
 class UserRegister(Resource):
+    """ Register flask resource class.
+
+     :methods: POST
+     """
     @films_api.marshal_with(user_model, code=200, envelope="users")
     @films_api.doc(params={"email": "string user's email",
                            "password": "string user's password",
-                            "nickname": "string user's nickname",
-                            "country": "string user's country",
-                            "city": "string user's city",
-                            "street": "string user's street"
+                           "nickname": "string user's nickname",
+                           "country": "string user's country",
+                           "city": "string user's city",
+                           "street": "string user's street"
                            })
     def post(self):
+        """ Registering user with POST request """
         parser = reqparse.RequestParser()
         parser.add_argument("email", required=True)
         parser.add_argument("password", required=True)
@@ -334,9 +354,7 @@ class UserRegister(Resource):
 
         user = models.User.query.filter_by(email=email).first()
         if user is None:
-            user = database.add_user(email=email, password=password, nickname=nickname, 
-                                country=country, city=city, street=street)
+            user = database.add_user(email=email, password=password, nickname=nickname,
+                                     country=country, city=city, street=street)
             return user.to_dict(), 200
-        else:
-            return f"User already registered!", 403
-        return "Wrong email/password pair", 204
+        return f"User {nickname} already registered!", 403

@@ -1,3 +1,4 @@
+""" Main films_app package entrypoint  """
 import os
 from flask import Flask
 from flask_login import LoginManager
@@ -13,6 +14,7 @@ migrate = Migrate()
 
 
 def create_app():
+    """ Films_app factory function """
     app = Flask(__name__)
     app.config.from_mapping(SECRET_KEY=os.environ.get('SECRET_KEY', default='dev'),
                                   SQLALCHEMY_TRACK_MODIFICATIONS=False,
@@ -26,5 +28,3 @@ def create_app():
 
 films_app = create_app()
 films_api = Api(films_app, doc="/api/", title="Stadnik's 'Films Library' API")
-
-

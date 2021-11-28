@@ -27,7 +27,7 @@ services:
   #     - pgadmin-data:/var/lib/pgadmin
 
   films_app:
-    build: .
+    build: ./flask_app
     restart: on-failure
     environment:
       POSTGRES_USER: ${POSTGRES_USER}

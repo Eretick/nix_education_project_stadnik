@@ -13,12 +13,13 @@ class BadRequestError(Exception):
         if status_code is not None:
             self.status_code = status_code
         self.payload = payload
-        super(Exception, self).__init__(self, message)
+        super().__init__(self, message)
 
     def to_dict(self):
-        rv = dict(self.payload or ())
-        rv["message"] = self.message
-        return rv
+        """ Method for response serialization """
+        data = dict(self.payload or ())
+        data["message"] = self.message
+        return data
 
 
 class NotAuthenticatedError(BadRequestError):
