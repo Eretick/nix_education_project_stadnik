@@ -9,9 +9,9 @@ from films_library import db, login_manager
 
 
 @login_manager.user_loader
-def load_user(id):
+def load_user(user_id):
     """ For keeping user in session """
-    return User.query.get(int(id))
+    return User.query.get(int(user_id))
 
 
 # Many To Many relationship between users and uploaded films
@@ -203,10 +203,12 @@ class Films(db.Model):
 
     @property
     def directors(self):
+        """ Property method for with minmal logic.
+        Returns directors list, linked to current film. Or "Unknown" if list is empty
+        """
         if len(self._directors) != 0:
             return self._directors
-        else:
-            return "unknown"
+        return "unknown"
 
 
 class Directors(db.Model):

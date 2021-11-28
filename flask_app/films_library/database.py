@@ -1,7 +1,7 @@
 """ Module for interacting with database """
 from flask_login import current_user
 from sqlalchemy import func, and_, desc, asc
-from .errors import NotAuthenticatedError, NotFoundError, UserPermissionError
+from .errors import NotAuthenticatedError, NotFoundError
 from .models import *
 from datetime import datetime
 
@@ -35,8 +35,9 @@ def maximum_films_date(to_string=False):
     return max_date
 
 
-def find_films_by_filters(template: str = None, date_from: datetime or str = None, date_to: datetime or str = None,
-                          page_number: int = None, pagination_size: int = None, genres: list = None,
+def find_films_by_filters(template: str = None, date_from: datetime or str = None,
+                          date_to: datetime or str = None, page_number: int = None,
+                          pagination_size: int = None, genres: list = None,
                           directors: list = None, sort_by: str = None, sort_type: str = None):
     """ Filtering films by passed parameters.
 
@@ -50,13 +51,17 @@ def find_films_by_filters(template: str = None, date_from: datetime or str = Non
 
     :param str directors: (optional) list of directors for filtering
 
-    :param str date_from: (optional) data in "%Y.%m.%d" format. Discarding films before given date's year
+    :param str date_from: (optional) data in "%Y.%m.%d" format.
+                          Discarding films before given date's year
 
-    :param str date_to: (optional) data in "%Y.%m.%d" format. Discarding films after given date's year
+    :param str date_to: (optional) data in "%Y.%m.%d" format.
+                        Discarding films after given date's year
 
-    :param str sort_by: (optional) sorting mode 'rate', 'date' or None. None is Default
+    :param str sort_by: (optional) sorting mode 'rate', 'date' or None.
+                        None is Default
 
-    :param str sort_type: (optional) sorting mode 'asc' (ascending) or 'desc' (descending). None is Default
+    :param str sort_type: (optional) sorting mode 'asc' (ascending) or 'desc' (descending).
+                          None is Default
 
     :returns: list of found films json data and status 200 if found, else error with status 404
 
@@ -82,9 +87,10 @@ def find_films_by_filters(template: str = None, date_from: datetime or str = Non
     page_offset = 0 if page_number == 1 else pagination_size * (page_number - 1)
     # making search
     films_data = db.session.query(Films).filter(Films.title.ilike("%" + template + "%")).filter(
-        and_(Films.release_date >= date_from)).filter(and_(Films.release_date <= date_to)).join(films_directors)\
-        .filter(Films.id == films_directors.c.film_id).join(Directors).filter(Directors.full_name.in_(directors))\
-        .join(films_genres).filter(Films.id == films_genres.c.film_id).join(Genres).filter(Genres.name.in_(genres)) \
+        and_(Films.release_date >= date_from)).filter(and_(Films.release_date <= date_to))\
+        .join(films_directors).filter(Films.id == films_directors.c.film_id).join(Directors)\
+        .filter(Directors.full_name.in_(directors)).join(films_genres)\
+        .filter(Films.id == films_genres.c.film_id).join(Genres).filter(Genres.name.in_(genres))
 
     # defining sorting type
     if sort_type is not None:
@@ -161,8 +167,7 @@ def add_user(nickname: str, email: str, password: str, country: str = "",
         db.session.add(user)
         db.session.commit()
         return user
-    else:
-        raise ValueError("User with same email already registered")
+    raise ValueError("User with same email already registered")
 
 
 def add_director(full_name: str):
@@ -250,10 +255,11 @@ def add_genre(genre_name: str):
 def add_films_directors(film: Films, directors: list or str):
     """ Linking directors to films.
 
-     :param list or str directors: list of directors names or string like 'director1,director2' who needs
-                                    to be added to current film.
+     :param list or str directors: list of directors names or string like 'director1,director2'
+                                    who needs to be added to current film.
 
-     :param film: Film instance which directors list is updating. Must be added to database in function calling moment.
+     :param film: Film instance which directors list is updating.
+                  Must be added to database in function calling moment.
 
      :returns None
      """
@@ -293,11 +299,12 @@ def add_films_directors(film: Films, directors: list or str):
 def add_films_genres(film: Films, genres: list or str):
     """ Linking genres to film.
 
-     :param list or str genres: list of directors names or string like 'director1,director2' who needs
-                                    to be added to current film. Every time needs full list cause old values will
-                                    be deleted.
+     :param list or str genres: list of directors names or string like 'director1,director2'
+                                    who needs to be added to current film. Every time needs
+                                    full list cause old values will be deleted.
 
-     :param film: Film instance which directors list is updating. Must be added to database in function calling moment.
+     :param film: Film instance which directors list is updating.
+                  Must be added to database in function calling moment.
 
      :returns None
      """
@@ -363,8 +370,8 @@ def add_film(title: str, release_date: datetime, user: int or User,
     else:
         raise TypeError("User id must be an integer, or numeric string or User instance!")
 
-    film = Films(title=title, description=description,
-                 user_id=int(user_id), rate=float(rate), release_date=release_date, poster_url=poster_url)
+    film = Films(title=title, description=description, user_id=int(user_id),
+                 rate=float(rate), release_date=release_date, poster_url=poster_url)
 
     if validate_film(film) is not True:
 
@@ -389,12 +396,12 @@ def add_film(title: str, release_date: datetime, user: int or User,
         raise ValueError(f"Film {film.title} already added.")
 
 
-def edit_film(id: int, title: str = None, release_data: datetime = None,
-              directors: str = None, genres: list = None, poster_url: str = None, description: str = None,
-              rate: int = 0):
+def edit_film(film_id: int, title: str = None, release_data: datetime = None,
+              directors: str = None, genres: list = None, poster_url: str = None,
+              description: str = None, rate: int = 0):
     """ Create film row in database and add row to Films table in db.
 
-    :param int id: film's id from database what needs to be updated.
+    :param int film_id: film's id from database what needs to be updated.
 
     :param title: string film name
 
@@ -415,7 +422,7 @@ def edit_film(id: int, title: str = None, release_data: datetime = None,
     # Looking at film with given id
     if isinstance(directors, str):
         directors = directors.strip().split(",")
-    film = Films.query.filter_by(id=id).first()
+    film = Films.query.filter_by(id=film_id).first()
     user = current_user
     if current_user.is_authenticated:
         # if film was found
@@ -432,34 +439,32 @@ def edit_film(id: int, title: str = None, release_data: datetime = None,
                 add_films_genres(film, genres)
                 db.session.commit()
                 return film.to_dict(), 200
-            else:
-                raise ValueError("Only admins and owners can edit film!")
+            raise ValueError("Only admins and owners can edit film!")
         else:
             raise FileNotFoundError("Film not found!")
     else:
         return NotAuthenticatedError()
 
 
-def delete_film(id: int):
+def delete_film(film_id: int):
     """ Function for deleting the film from all films table """
-    if id is not None:
-        film = Films.query.filter_by(id=id).first()
+    if film_id is not None:
+        film = Films.query.filter_by(id=film_id).first()
         if film is not None:
-            if isinstance(id, int):
-                Films.query.filter_by(id=id).delete()
+            if isinstance(film_id, int):
+                Films.query.filter_by(id=film_id).delete()
                 db.session.commit()
                 return film
-            else:
-                raise TypeError("ID must be int!")
+            raise TypeError("ID must be int!")
         else:
             raise NotFoundError("Film with given id doesn't exist in films database")
     else:
         raise ValueError("Wrong deletion film id!")
 
 
-def set_admin(user_id:int, admin_mode:bool):
-    """ Function for changin admin bode for user with given ID.
-    Chamhing is_admin value in database for given user
+def set_admin(user_id: int, admin_mode: bool):
+    """ Function for changing admin bode for user with given ID.
+    Changing is_admin value in database for given user
     """
     if not isinstance(user_id, int):
         raise TypeError("User id must be integer!")
@@ -473,5 +478,3 @@ def set_admin(user_id:int, admin_mode:bool):
     user.set_admin(admin_mode)
 
     db.session.commit()
-
-
