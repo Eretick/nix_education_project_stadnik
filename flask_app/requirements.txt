@@ -1,0 +1,9 @@
+flask
+pg8000
+psycopg2-binary # for connecting to postgresql
+sqlalchemy
+flask_sqlalchemy
+flask-migrate
+flask-login
+flask-restx
+gunicorn
