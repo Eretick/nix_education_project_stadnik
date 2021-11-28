@@ -31,7 +31,7 @@ class NotAuthenticatedError(BadRequestError):
 class NotFoundError(BadRequestError):
     """ Error class for 404 (not found) http status code """
     status_code = 404
-    message = "Bad request"
+    message = "Not found"
 
 
 class UserPermissionError(BadRequestError):

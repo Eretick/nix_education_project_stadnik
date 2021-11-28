@@ -1,31 +1,44 @@
+set_sudo:
+	export USER_SUDO_PASSWORD=9966
+
 set_flask_app:
-    export FLASK_APP=flask_app/app.py
+	export FLASK_APP=flask_app/app.py
+
+get_flask_app:
+	echo $(FLASK_APP)
+
+app_logs:
+	sudo docker logs films_app
+
+go_to_app:
+	sudo docker exec -it films_app bash
 
 db_init:
-    flask db init
-    flask db migrate
+	flask db init
+
+db_migrate:
+	flask db migrate
 
 db_upgrade:
-    flask db migrate
-    flask db upgrade
+	flask db upgrade
 
 db_downgrade:
-    flask db downgrade
+	flask db downgrade
 
 app_build:
-    sudo docker-compose --env-file .env.list up -d --build
+	echo $(USER_SUDO_PASSWORD) | sudo -S docker-compose --env-file .env.list up -d --build
 
 app_up:
-    sudo docker-compose --env-file .env.list up -d
+	sudo docker-compose --env-file .env.list up -d
 
 app_down:
-    sudo docker-compose down
+	echo $USER_SUDO_PASSWORD | sudo -S docker-compose down
 
 volumes_remove:
-	sudo docker rm -f $(sudo docker ps -aq)
+	echo $USER_SUDO_PASSWORD | sudo -S docker rm -f $(sudo docker ps -aq)
 
 stop_nginx:
-    sudo nginx -s stop
+	echo $USER_SUDO_PASSWORD | sudo -S nginx -s stop
 
 look_80:
-    sudo lsof -i -P -n | grep 80
+	sudo lsof -i -P -n | grep 80
