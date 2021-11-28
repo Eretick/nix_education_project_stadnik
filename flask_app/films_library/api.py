@@ -6,6 +6,7 @@ from . import films_api
 from . import database
 from . import models
 from .errors import NotAuthenticatedError, UserPermissionError, NotFoundError, BadRequestError
+from .logger import Log
 
 # json models
 film_model = films_api.model("Film", {"id": fields.Integer(required=True),
@@ -21,7 +22,7 @@ film_model = films_api.model("Film", {"id": fields.Integer(required=True),
 user_model = films_api.model("User", {"id": fields.Integer(), "nickname": fields.String(),
                                       "email": fields.String(), "country": fields.String(),
                                       "city": fields.String(), "street": fields.String(),
-                                      "is_admin": fields.Boolean()})
+                                      "is_admin": fields.Boolean(), "films": fields.List(fields.String)})
 
 director_model = films_api.model("Director", {"id": fields.Integer(), "full_name": fields.String()})
 
@@ -78,10 +79,13 @@ class FilmsManipulator(Resource):
                                                         genres=genres, directors=directors, sort_by=sort_by,
                                                         sort_type=sort_type)
         except ValueError as e:
+            Log.error(e)
             return str(e), 403
-        except NotFoundError as e:
-            return e.message, e.status_code
+        except NotFoundError as n:
+            Log.error(n)
+            return n.message, n.status_code
         else:
+            Log.info("Found some films by given filters.")
             return films_data, 200
 
     @films_api.doc(params={"title": "string title of the film",
@@ -117,6 +121,7 @@ class FilmsManipulator(Resource):
         rate = 0 if params["rate"] is None else params["rate"]
         # aborting operation if one of important params wasn't passed
         if None in [title, description, directors, date, poster_url, genres]:
+            Log.error("Not all film's parameters passed!")
             return "Not all film's parameters passed!", 403
         # only registered users can add the films
         if current_user.is_authenticated:
@@ -128,7 +133,9 @@ class FilmsManipulator(Resource):
                                          directors=directors, rate=rate,
                                          poster_url=poster_url, genres=genres)
             except ValueError:
+                Log.error(f"Film {title} already exists!")
                 return "Current film already exists!", 403
+            Log.info(f"Film {title} added successfully.")
             return film.to_dict(), 201
 
     # @films_api.marshal_with(film_model, code=200, envelope="films")
@@ -143,21 +150,30 @@ class FilmsManipulator(Resource):
         params = parser.parse_args()
         film_id = params.get("id")
         if current_user.is_authenticated:
-            if current_user.is_admin or current_user.id == id:
-                try:
-                    film = database.delete_film(film_id)
-                except TypeError as e:
-                    return str(e), 404
-                except NotFoundError as n:
-                    return n.message, n.status_code
-                except ValueError as v:
-                    return str(v), 404
-                except UserPermissionError as u:
-                    return u.message, u.status_code
+            film = models.Films.query.filter_by(id=film_id).first()
+            if film is not None:
+                Log.error(f"{current_user.nickname}, {current_user.id}, {film_id}, {current_user.id == film.user_id}")
+                if current_user.is_admin or current_user.id == film.user_id:
+                    try:
+                        film = database.delete_film(film_id)
+                    except TypeError as e:
+                        Log.error(e)
+                        return str(e), 404
+                    except NotFoundError as n:
+                        Log.error(n.message)
+                        return n.message, n.status_code
+                    except ValueError as v:
+                        Log.error(v)
+                        return str(v), 404
+                    else:
+                        Log.info(f"Film {film.title} deleted successfully.")
+                        return film.to_dict(), 200
                 else:
-                    return film.to_dict(), 200
+                    Log.error(UserPermissionError.message)
+                    return UserPermissionError.message, UserPermissionError.status_code
             else:
-                return UserPermissionError.message, UserPermissionError.status_code
+                Log.info(NotFoundError.message)
+                return NotFoundError.message, NotFoundError.status_code
 
     @films_api.marshal_with(film_model, code=201, envelope="edited_film")
     @films_api.doc(params={"id": "film's id from database you want to edit",
@@ -183,7 +199,7 @@ class FilmsManipulator(Resource):
         parser.add_argument("rate", type=int, help="Integer number of film's rate between 1-10.")
         params = parser.parse_args()
 
-        id = params["id"]
+        film_id = params["id"]
         title = params["title"]
         description = params["description"]
         directors = params["directors"]
@@ -191,11 +207,18 @@ class FilmsManipulator(Resource):
         logo_url = params["poster_url"]
         genres = params["genres"]
         rate = params["rate"]
-
-        edition = database.edit_film(film_id=id, title=title, description=description,
-                                     directors=directors, rate=rate, release_data=date,
-                                     poster_url=logo_url, genres=genres)
-        return edition, 200
+        try:
+            edition = database.edit_film(film_id=film_id, title=title, description=description,
+                                         directors=directors, rate=rate, release_data=date,
+                                         poster_url=logo_url, genres=genres)
+        except UserPermissionError as u:
+            return u.message, u.status_code
+        except NotFoundError as f:
+            return f.message, f.status_code
+        except NotAuthenticatedError as n:
+            return n.message, n.status_code
+        else:
+            return edition, 200
 
 
 @films_api.route("/api/directors/")
@@ -213,9 +236,12 @@ class DirectorsManipulator(Resource):
         params = parser.parse_args()
         name = params["director_name"]
         if name is not None:
+            # no logs here cause they inside function
             director = database.add_director(name)
             return director, 201
-        return BadRequestError.message, BadRequestError.status_code
+        else:
+            Log.error(f"Director {name} already added")
+            return f"Director {name} already added", BadRequestError.status_code
 
     @films_api.doc(params={"director_name": "Name of director for deleting"})
     @login_required
@@ -228,8 +254,8 @@ class DirectorsManipulator(Resource):
         try:
             director = database.delete_director(director)
             return director, 200
-        except NotFoundError:
-            return "Director with given name wasn't found!", 403
+        except NotFoundError as n:
+            return n.message, n.message
 
 
 # users api
@@ -249,29 +275,54 @@ class UserProfile(Resource):
             if current_user.is_authenticated:
                 user = current_user.to_dict()
                 return user, 200
-            return "You must login for view profile", 401
+            else:
+                Log.warning("You must login for view profile")
+                return "You must login for view profile", 401
 
     @films_api.doc(params={"user_id": "User id",
                            "is_admin": "bool admin mode"
                            })
     @login_required
     def put(self):
-        """ Changing user admin mode with PUT method """
+        """ Changing user admin mode
+
+        :param int user_id: user id from database (could be got from user instance)
+
+        :param bool is_admin: new True/False value for user with given id,
+
+        :returns: status code 200 if success.
+
+        """
         parser = reqparse.RequestParser()
         parser.add_argument("user_id", type=int, required=True)
         parser.add_argument("is_admin", type=bool, required=True)
         params = parser.parse_args()
         user_id = params["user_id"]
         is_admin = params["is_admin"]
-        database.set_admin(user_id, is_admin)
-        return "Success!"
+        if current_user.is_authenticated and current_user.is_admin:
+            try:
+                database.set_admin(user_id, is_admin)
+            except TypeError as t:
+                Log.error(t)
+                return t, 403
+            except NotFoundError as n:
+                Log.error(n.message)
+                return n.message, n.status_code
+            else:
+                Log.info(f"Changed admin mode for user with id={user_id}")
+                return "Success!", 200
+        else:
+            Log.warning(UserPermissionError.message)
+            return UserPermissionError.message, UserPermissionError.status_code
 
 
 @films_api.route("/api/users/login/")
 class UserLogin(Resource):
     """ Login flask resource.
 
-    :methods: POST"""
+    :methods: POST
+    """
+
     # @films_api.marshal_with(user_model, code=200, envelope="users")
     @films_api.doc(params={"email": "string user's email",
                            "password": "string user's password"
@@ -286,14 +337,17 @@ class UserLogin(Resource):
         email = params["email"]
         password = params["password"]
         if email is None or password is None:
-            return "No data passed", 403
+            Log.error("Not all data passed")
+            return "Not all data passed", 403
 
         if current_user.is_authenticated:
+            Log.warning(f"{current_user.nickname} already logged in!")
             return f"{current_user.nickname} already logged in!", 303
 
         user = models.User.query.filter_by(email=email).first()
         if user is not None and user.check_password(password):
             login_user(user, remember=True)
+            Log.info(f"User {user.nickname} with id {user.id} logged in.")
             return user.to_dict(), 200
         return "Wrong email/password pair", 204
 
@@ -310,8 +364,11 @@ class UserLogout(Resource):
         if current_user.is_authenticated:
             name = current_user.nickname
             logout_user()
+            Log.info(f"User {name} logged out.")
             return name, 200
-        raise NotAuthenticatedError("Only logged in users can logout!")
+        else:
+            Log.warning("Only logged in users can logout!")
+            return "Only logged in users can logout!", 403
 
 
 @films_api.route("/api/users/register/")
@@ -347,14 +404,24 @@ class UserRegister(Resource):
         street = params["street"]
 
         if email is None or password is None:
+            Log.warning("Needs email and password both for register")
             return "Needs email and password both for register", 403
 
         if current_user.is_authenticated:
-            return f"{current_user.nickname} already registered in!", 303
+            Log.warning(f"{current_user.nickname} already logged in! Please logout for new registering")
+            return f"{current_user.nickname} already logged in! Please logout for new registering", 303
 
         user = models.User.query.filter_by(email=email).first()
         if user is None:
-            user = database.add_user(email=email, password=password, nickname=nickname,
-                                     country=country, city=city, street=street)
-            return user.to_dict(), 200
-        return f"User {nickname} already registered!", 403
+            try:
+                user = database.add_user(email=email, password=password, nickname=nickname,
+                                         country=country, city=city, street=street)
+            except ValueError as v:
+                Log.error(v)
+                return v, 403
+            else:
+                Log.info(f"User {nickname} with email {email} registered")
+                return user.to_dict(), 200
+        else:
+            Log.error(f"User already registered!")
+            return f"User already registered!", 403
