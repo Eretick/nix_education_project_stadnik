@@ -67,9 +67,8 @@ class User(UserMixin, db.Model):
 
     def to_dict(self):
         """ Create dict from attributes to adopt it for json. """
-        data = dict(id=self.id, nickname=self.nickname, email=self.email,
-                    password=self.password, country=self.country,
-                    city=self.city, street=self.street, is_admin=self.is_admin)
+        data = dict(id=self.id, nickname=self.nickname, email=self.email, country=self.country,
+                    city=self.city, street=self.street, is_admin=self.is_admin, films=self.films)
         return data
 
     def set_password(self, new_password: str):
@@ -112,6 +111,11 @@ class User(UserMixin, db.Model):
         """ Method for changin user's admin mode. """
         self.is_admin = mode
 
+    @property
+    def films(self):
+        """ Returns all films linked with user """
+        return self._films.all()
+
 
 class Films(db.Model):
     """ Model for films table.
@@ -139,10 +143,11 @@ class Films(db.Model):
     # Many-to-many relation with table users_films
     # 'films' in backrefs is the name of "column" id User class.
     # for adding films by append to instance(user.films.append(film))
-    users = db.relationship("User", secondary=users_films, backref=db.backref("films", lazy="dynamic"))
+    users = db.relationship("User", secondary=users_films, backref=db.backref("_films", lazy="dynamic"))
     # Many-to-many relation with table directors
     _directors = db.relationship("Directors", secondary=films_directors, backref=db.backref("films", lazy="dynamic"))
-    genres = db.relationship("Genres", secondary=films_genres, backref=db.backref("films", lazy="dynamic", cascade="all,delete", passive_deletes=True))
+    genres = db.relationship("Genres", secondary=films_genres,
+                             backref=db.backref("films", lazy="dynamic", cascade="all,delete", passive_deletes=True))
 
     def to_dict(self):
         """ Create dict from attributes to adopt it for json. """
@@ -239,6 +244,3 @@ class Genres(db.Model):
     def __repr__(self):
         """ Magic method for useful printing info about instance """
         return self.name
-
-
-db.create_all()

@@ -14,25 +14,29 @@ services:
     ports:
       - "5432:5432"
 
-  # pgadmin:
-  #   image: dpage/pgadmin4:4.30
-  #   restart: always
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-  #     PGADMIN_LISTEN_PORT: 800
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - pgadmin-data:/var/lib/pgadmin
+#    pgadmin:
+#      image: dpage/pgadmin4:4.30
+#      restart: always
+#      depends_on:
+#        - db
+#      environment:
+#        PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+#        PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+#        PGADMIN_LISTEN_PORT: 800
+#     ports:
+#       - "8080:8080"
+#     volumes:
+#       - pgadmin-data:/var/lib/pgadmin
 
   films_app:
     build: ./flask_app
     restart: on-failure
+    container_name: films_app
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       SQLALCHEMY_DATABASE_URI: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/postgres
+      LOG_MODE: ${LOG_MODE}
     volumes:
       - ./flask_app/:/app
     expose:
@@ -55,3 +59,4 @@ services:
 volumes:
   db-data:
   pgadmin-data:
+  films_app:
