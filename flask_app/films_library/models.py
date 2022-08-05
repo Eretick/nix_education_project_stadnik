@@ -5,7 +5,7 @@
 from flask_login import UserMixin
 from datetime import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
-from films_library import db, login_manager
+from . import db, login_manager
 
 
 @login_manager.user_loader

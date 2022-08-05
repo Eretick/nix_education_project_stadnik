@@ -1,6 +1,6 @@
 """ Module for generating some fake data """
 import datetime
-from flask_app.database import add_film, add_user, add_genre
+from flask_app.films_library.database import add_film, add_user, add_genre
 import csv
 
 
