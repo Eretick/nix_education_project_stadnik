@@ -1,5 +1,6 @@
 flask
 pg8000
+werkzeug==2.1.2
 psycopg2-binary # for connecting to postgresql
 sqlalchemy
 flask_sqlalchemy
